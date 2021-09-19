@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace SmartAI.Artificial_Intelligence
 {
@@ -27,14 +28,16 @@ namespace SmartAI.Artificial_Intelligence
             base.Start();
         }
 
-        protected override void Update()
+        protected void Update()
         {
-            base.Update();
             // These two lines are used to run the state machine
             // it works by attempting to retrieve the relevant function for the current state.
             // then running the function if it successfully found it 
             if(states.TryGetValue(currentState, out StateDelegate state)) state.Invoke();
             else Debug.Log($"No State Was Set For {currentState}.");
+            
+            Debug.DrawLine(transform.position, navAgent.destination, Color.blue);
+            tpCharacter.Move(navAgent.desiredVelocity, false, false);
         }
     }
 }
