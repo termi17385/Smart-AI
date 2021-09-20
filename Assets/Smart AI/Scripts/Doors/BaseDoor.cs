@@ -1,3 +1,5 @@
+using System;
+
 using UnityEngine;
 namespace SmartAI.Doors
 {
@@ -15,7 +17,7 @@ namespace SmartAI.Doors
             openPos = transform.Find("OpenPos");
             closedPos = transform.Find("ClosedPos");
         }
-        
+
         public virtual void OpenDoor(bool _open)
         {
             Transform endpos = _open ? openPos : closedPos;

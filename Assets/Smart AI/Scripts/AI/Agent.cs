@@ -1,6 +1,9 @@
 ﻿using UnityStandardAssets.Characters.ThirdPerson;
 using UnityEngine.AI;
 using SmartAI.Doors;
+
+using System.Collections.Generic;
+
 using UnityEngine;
 
 namespace SmartAI.Artificial_Intelligence
@@ -8,7 +11,7 @@ namespace SmartAI.Artificial_Intelligence
 	[RequireComponent(typeof(NavMeshAgent), typeof(Waypoints))]
 	public class Agent : MonoBehaviour
 	{
-		[SerializeField] private Vector3 point;
+		[SerializeField] protected Transform point;
 		public AgentMachine machine;
 		
 		protected ThirdPersonCharacter tpCharacter;
@@ -17,6 +20,9 @@ namespace SmartAI.Artificial_Intelligence
 		private Transform targetObject;
 		private Waypoints mainPath;
 		private NavMeshPath path;
+		
+		private readonly float searchRadius = 10;
+		private bool agentStopped = false;
 
 		protected virtual void Start()
 		{
@@ -30,7 +36,6 @@ namespace SmartAI.Artificial_Intelligence
 			navAgent.updateRotation = false;
 			path = new NavMeshPath();
 		}
-
 		/// <summary> Checks the distance to the specified target before interacting with it </summary>
 		/// <param name="_transform">the target to check the distance with</param>
 		private void CheckDistThenInteract(Transform _transform)
@@ -38,14 +43,13 @@ namespace SmartAI.Artificial_Intelligence
 			var dist = Vector3.Distance(transform.position, _transform.position);
 			if(dist <= 2.5f) machine.ChangeState(AgentStates.Interact);
 		}
-
 		/// <summary> Navigates the given
 		/// path towards a goal </summary>
 		protected void NavigatePath()
 		{
 			// check if the path is valid making sure nothing is blocking the path
-			point = mainPath.SetNextWaypoint(transform).position;
-			navAgent.CalculatePath(point, path);
+			point = mainPath.SetNextWaypoint(transform);
+			navAgent.CalculatePath(point.position, path);
 			Debug.Log(path.status);
 
 			// if the path is valid follow it
@@ -54,7 +58,7 @@ namespace SmartAI.Artificial_Intelligence
 			navAgent.stoppingDistance = 0;
 			if(path.status == NavMeshPathStatus.PathComplete)
 			{
-				navAgent.SetDestination(point);
+				navAgent.SetDestination(point.position);
 				SearchForObjectsOfInterest();
 			}
 			
@@ -68,22 +72,18 @@ namespace SmartAI.Artificial_Intelligence
 			// if an alternative route is found go towards that route and follow it
 			// else if the path is blocked by a door search around for a key
 		}
-
-		private readonly float searchRadius = 10;
-		private bool agentStopped = false;
-
 		/// <summary> Makes the agent wander around aimlessly until
 		/// they find something of value of the path is open </summary>
 		protected void WanderAround()
 		{
-			point = mainPath.SetNextWaypoint(transform).position;
-			navAgent.CalculatePath(point, path);
+			point = mainPath.SetNextWaypoint(transform);
+			navAgent.CalculatePath(point.position, path);
 			
 			if(path.status == NavMeshPathStatus.PathPartial)
 			{
 				if(navAgent.remainingDistance <= 0.5f)
 				{
-					Vector3 pos = AIUtils.RandomNavSphere(transform.position, 10, 1);
+					Vector3 pos = AIUtils.RandomNavSphere(transform.position, wanderRadius, 1);
 					navAgent.SetDestination(pos);
 					navAgent.speed = .5f;
 				}
@@ -91,14 +91,13 @@ namespace SmartAI.Artificial_Intelligence
 			else machine.ChangeState(AgentStates.FollowPath);
 			SearchForObjectsOfInterest();
 		}
-		
 		/// <summary> Searchs for any objects
 		/// that can be collected or used </summary>
 		protected void SearchForObjectsOfInterest()
 		{
 			// grabs any collider with the agents radius
 			var colliders = Physics.OverlapSphere(transform.position, searchRadius);
-			navAgent.CalculatePath(point, path);  // checks to make sure that the path isnt complete
+			navAgent.CalculatePath(point.position, path);  // checks to make sure that the path isnt complete
 			Debug.Log(path.status);
 			
 			// if the path is complete and the agent can move ignore everything and run towards the path
@@ -120,12 +119,10 @@ namespace SmartAI.Artificial_Intelligence
 					float dist = Vector3.Distance(other.transform.position, currentPos);
 					if (dist < minDist)
 					{
-						// ignores any activated switches
-						if(other.TryGetComponent(out Switch @switch))
-							if(@switch.Activated) return;
-						
-						if(other.TryGetComponent(out LockSwitch @lock))
-							if(@lock.used) return;
+						// handles what to ignore when searching for objects
+						if(other.TryGetComponent(out Switch @switch)) if(@switch.Activated) return;
+						if(other.TryGetComponent(out LockSwitch @lock)) if(@lock.used) return;
+						if(other.TryGetComponent(out LockSwitch lockSwitch)) if(GameManager.instance.SetKeys <= 0) return;
 						
 						// assigns the closest target
 						tMin = other.transform;
@@ -137,7 +134,6 @@ namespace SmartAI.Artificial_Intelligence
 			targetObject = tMin; // moves the the closest target
 			if(targetObject != null) machine.ChangeState(AgentStates.MoveTo);
 		}
-		
 		/// <summary> handles moving the agent
 		/// towards the object or target </summary>
 		protected void MoveTowardsObject()
@@ -149,7 +145,6 @@ namespace SmartAI.Artificial_Intelligence
 			}
 			else machine.ChangeState(AgentStates.Search);
 		}
-
 		/// <summary> allows to hot swap out targets
 		/// for the move towards method </summary>
 		/// <param name="_target">what to move towards</param>
@@ -159,7 +154,6 @@ namespace SmartAI.Artificial_Intelligence
 			navAgent.SetDestination(_target.position);
 			if(!agentStopped)navAgent.speed = 1;
 		}
-		
 		/// <summary> Handles interaction with
 		/// certain objects when called </summary>
 		protected void InteractWithObject()
@@ -198,14 +192,17 @@ namespace SmartAI.Artificial_Intelligence
 			targetObject = null;	
 			machine.ChangeState(AgentStates.FollowPath);
 		}
-		
+
+		[SerializeField] private float wanderRadius = 25;
 		private void OnDrawGizmosSelected()
 		{
+			// for searching
 			Gizmos.color = Color.green;
 			Gizmos.DrawWireSphere(transform.position, searchRadius);
+			
+			// for the wandering radius
+			Gizmos.color = Color.blue;
+			Gizmos.DrawWireSphere(transform.position, wanderRadius);
 		}
-
-		// when detecting a door or a blockage search for alternative routes
-		// if the door is closed search for a switch if it is locked search for the key then find the switch
 	}
 }

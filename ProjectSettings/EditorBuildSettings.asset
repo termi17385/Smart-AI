@@ -4,5 +4,11 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Smart AI/Scenes/MainMenu.unity
+    guid: 24381911d8769934f9e0fe5e0ed2226a
+  - enabled: 1
+    path: Assets/Smart AI/Scenes/Testing Grounds.unity
+    guid: 6df882115f05b8b42a01ca0d7632e37b
   m_configObjects: {}

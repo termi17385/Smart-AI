@@ -6,7 +6,7 @@ namespace SmartAI.Doors
         [SerializeField] private BaseDoor[] triggerDoor;
         public bool Activated => !toggle;
         
-        [SerializeField] private bool toggle = true;
+        private bool toggle = true;
         private Transform LeverBase;
         private Transform onPos;
         private Transform offPos;

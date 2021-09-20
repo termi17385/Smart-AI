@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 namespace SmartAI.Artificial_Intelligence
 {
@@ -10,6 +9,7 @@ namespace SmartAI.Artificial_Intelligence
         Search,
         MoveTo,
         Interact,
+        Win
     }
 
     public delegate void StateDelegate();
@@ -17,17 +17,19 @@ namespace SmartAI.Artificial_Intelligence
     {
         private Dictionary<AgentStates, StateDelegate> states = new Dictionary<AgentStates, StateDelegate>();
         [SerializeField] private AgentStates currentState = AgentStates.FollowPath;
+        private static readonly int win = Animator.StringToHash("Win");
         public void ChangeState(AgentStates _newState) => currentState = _newState;
 
         protected override void Start()
         {
-            states.Add(AgentStates.FollowPath, NavigatePath);
-            states.Add(AgentStates.MoveTo, MoveTowardsObject);
-            states.Add(AgentStates.Search, WanderAround);
             states.Add(AgentStates.Interact, InteractWithObject);
+            states.Add(AgentStates.MoveTo, MoveTowardsObject);
+            states.Add(AgentStates.FollowPath, NavigatePath);
+            states.Add(AgentStates.Search, WanderAround);
+            states.Add(AgentStates.Win, Winner);
             base.Start();
+            Time.timeScale = 0.0f;
         }
-
         protected void Update()
         {
             // These two lines are used to run the state machine
@@ -38,6 +40,14 @@ namespace SmartAI.Artificial_Intelligence
             
             Debug.DrawLine(transform.position, navAgent.destination, Color.blue);
             tpCharacter.Move(navAgent.desiredVelocity, false, false);
+            GameManager.instance.ActiveState(currentState);
+
+            if(point.name.Contains("Goal")) ChangeState(AgentStates.Win);
+        }
+        private void Winner()
+        {
+            GetComponent<Animator>().SetBool(win, true);
+            GameManager.instance.ActivateResetMenu();
         }
     }
 }

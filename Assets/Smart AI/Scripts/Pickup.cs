@@ -1,11 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary> when interacted with the pickup checks its current
+/// type then does the action specific to that type </summary>
 public class Pickup : MonoBehaviour
 {
 	[SerializeField] private ItemType currentType = ItemType.Coin;
-	[SerializeField, Tooltip("Only assign if the type is a key")] private Transform doorTarget = null;
 	
 	public void CollectItem()
 	{
